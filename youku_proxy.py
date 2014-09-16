@@ -34,10 +34,11 @@ import tornado.iostream
 import tornado.web
 import tornado.httpclient
 from urllib import quote
+import urls
 
 __all__ = ['ProxyHandler', 'run_proxy']
 
-proxy = 'your_bae.sinaapp.com'
+proxy = 'seaaddress.sinaapp.com'
 eth = ('server_ip', 80)
 
 class ProxyHandler(tornado.web.RequestHandler):
@@ -63,13 +64,26 @@ class ProxyHandler(tornado.web.RequestHandler):
             self.finish()
 
         headers = self.request.headers.copy()
-        #url = 'http://' + proxy + '/?url=' + quote(self.request.uri)
-        url = 'http://' + proxy + '/?url=' + quote('http://' + headers['Host'] + self.request.uri)
-        headers['Host'] = proxy
-        req = tornado.httpclient.HTTPRequest(url=url,
-            method=self.request.method, body=self.request.body,
-            headers=headers, follow_redirects=False,
-            allow_nonstandard_methods=True)
+        #Proxy Mode
+        url = self.request.uri
+        #Host Mode
+        #url = 'http://' + headers['Host'] + self.request.uri
+        if url.startswith('/'):
+            url = 'http://' + headers['Host'] + self.request.uri
+        if url_in_rule(url) is True:
+            #use sae proxy
+            url = 'http://' + proxy + '/?url=' + quote(url)
+            del headers['Host']
+            req = tornado.httpclient.HTTPRequest(url=url,
+                method=self.request.method, body=self.request.body,
+                headers=headers, follow_redirects=False,
+                allow_nonstandard_methods=True)
+        else:
+            #direct
+            req = tornado.httpclient.HTTPRequest(url=url,
+                method=self.request.method, body=self.request.body,
+                headers=headers, follow_redirects=False,
+                allow_nonstandard_methods=True)
 
         client = tornado.httpclient.AsyncHTTPClient()
         try:
@@ -120,6 +134,13 @@ class ProxyHandler(tornado.web.RequestHandler):
         upstream = tornado.iostream.IOStream(s)
         upstream.connect((host, int(port)), start_tunnel)
 
+def url_in_rule(url):
+    import re
+    for i in urls.unblock_youku_http:
+        r = re.search(i, url)
+        if not r is None:
+            return True
+    return False
 
 def run_proxy(eth, start_ioloop=True):
     """
@@ -127,7 +148,7 @@ def run_proxy(eth, start_ioloop=True):
     the tornado IOLoop will be started immediately.
     """
     app = tornado.web.Application([
-        (r'.*', ProxyHandler),
+        (r'\S+', ProxyHandler),
     ])
     app.listen(port=eth[1], address=eth[0])
     ioloop = tornado.ioloop.IOLoop.instance()
