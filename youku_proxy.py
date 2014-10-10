@@ -73,6 +73,7 @@ class ProxyHandler(tornado.web.RequestHandler):
             url = 'http://' + headers['Host'] + self.request.uri
         if url_in_rule(url, urls.unblock_youku_http) is True:
             #use sae proxy
+            print 'byproxy', url
             url = 'http://' + proxy + '/?url=' + quote(url)
             del headers['Host']
             req = tornado.httpclient.HTTPRequest(url=url,
@@ -81,11 +82,14 @@ class ProxyHandler(tornado.web.RequestHandler):
                 allow_nonstandard_methods=True)
         elif url_in_rule(url, urlsbypass.unblock_youku_http) is True:
             #direct
+            print 'bypass', url
             req = tornado.httpclient.HTTPRequest(url=url,
                 method=self.request.method, body=self.request.body,
                 headers=headers, follow_redirects=False,
                 allow_nonstandard_methods=True)
         else:
+            print 'deny', url
+            self.set_status(500)
             self.finish()
             return
 
