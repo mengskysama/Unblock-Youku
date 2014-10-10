@@ -35,6 +35,7 @@ import tornado.web
 import tornado.httpclient
 from urllib import quote
 import urls
+import urlsbypass\
 
 __all__ = ['ProxyHandler', 'run_proxy']
 
@@ -70,7 +71,7 @@ class ProxyHandler(tornado.web.RequestHandler):
         #url = 'http://' + headers['Host'] + self.request.uri
         if url.startswith('/'):
             url = 'http://' + headers['Host'] + self.request.uri
-        if url_in_rule(url) is True:
+        if url_in_rule(url, urls.unblock_youku_http) is True:
             #use sae proxy
             url = 'http://' + proxy + '/?url=' + quote(url)
             del headers['Host']
@@ -78,12 +79,15 @@ class ProxyHandler(tornado.web.RequestHandler):
                 method=self.request.method, body=self.request.body,
                 headers=headers, follow_redirects=False,
                 allow_nonstandard_methods=True)
-        else:
+        elif url_in_rule(url, urlsbypass.unblock_youku_http) is True:
             #direct
             req = tornado.httpclient.HTTPRequest(url=url,
                 method=self.request.method, body=self.request.body,
                 headers=headers, follow_redirects=False,
                 allow_nonstandard_methods=True)
+        else:
+            self.finish()
+            return
 
         client = tornado.httpclient.AsyncHTTPClient()
         try:
@@ -134,9 +138,9 @@ class ProxyHandler(tornado.web.RequestHandler):
         upstream = tornado.iostream.IOStream(s)
         upstream.connect((host, int(port)), start_tunnel)
 
-def url_in_rule(url):
+def url_in_rule(url, urls_list):
     import re
-    for i in urls.unblock_youku_http:
+    for i in urls_list:
         r = re.search(i, url)
         if not r is None:
             return True
