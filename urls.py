@@ -142,4 +142,5 @@ unblock_youku_http = [
     'http://tms.is.ysten.com:8080/yst-tms/login.action\?\S+',
     'http://chrome.2345.com/dianhua/mobileApi/check.php',
     'http://internal.check.duokanbox.com/check.json\S+'
+    'http://hub5btmain.sandai.net'
 ]
